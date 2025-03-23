@@ -1,0 +1,252 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/internal/migrate": {
+            "post": {
+                "security": [
+                    {
+                        "Authorization": []
+                    },
+                    {
+                        "Access Token": []
+                    },
+                    {
+                        "Entity Key": []
+                    },
+                    {
+                        "User ID": []
+                    }
+                ],
+                "tags": [
+                    "internal"
+                ],
+                "summary": "Database migration",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/todo/create": {
+            "post": {
+                "security": [
+                    {
+                        "Authorization": []
+                    },
+                    {
+                        "User ID": []
+                    }
+                ],
+                "tags": [
+                    "TODO"
+                ],
+                "summary": "Create new TODO",
+                "parameters": [
+                    {
+                        "description": "New TODO",
+                        "name": "todo",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.TodoRequest"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/todo/delete/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "Authorization": []
+                    },
+                    {
+                        "User ID": []
+                    }
+                ],
+                "tags": [
+                    "TODO"
+                ],
+                "summary": "Delete TODO",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/todo/get-list/": {
+            "get": {
+                "security": [
+                    {
+                        "Authorization": []
+                    },
+                    {
+                        "User ID": []
+                    }
+                ],
+                "tags": [
+                    "TODO"
+                ],
+                "summary": "List TODO",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "size per page",
+                        "name": "page_size",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page number (\u003e 0)",
+                        "name": "page",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "sort",
+                        "name": "sort",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/todo/get-one/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Authorization": []
+                    },
+                    {
+                        "User ID": []
+                    }
+                ],
+                "tags": [
+                    "TODO"
+                ],
+                "summary": "Get TODO",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id todo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/todo/hard-delete/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "Authorization": []
+                    },
+                    {
+                        "User ID": []
+                    }
+                ],
+                "tags": [
+                    "TODO"
+                ],
+                "summary": "HardDelete TODO",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/todo/update/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "Authorization": []
+                    },
+                    {
+                        "User ID": []
+                    }
+                ],
+                "tags": [
+                    "TODO"
+                ],
+                "summary": "Update TODO",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update todo",
+                        "name": "todo",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.TodoRequest"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        }
+    },
+    "definitions": {
+        "model.TodoRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "Authorization": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        },
+        "User ID": {
+            "type": "apiKey",
+            "name": "x-user-id",
+            "in": "header"
+        }
+    }
+}

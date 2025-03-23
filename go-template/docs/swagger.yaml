@@ -1,0 +1,148 @@
+definitions:
+  model.TodoRequest:
+    properties:
+      code:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      key:
+        type: string
+      name:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /internal/migrate:
+    post:
+      responses:
+        "200":
+          description: OK
+      security:
+      - Authorization: []
+      - Access Token: []
+      - Entity Key: []
+      - User ID: []
+      summary: Database migration
+      tags:
+      - internal
+  /todo/create:
+    post:
+      parameters:
+      - description: New TODO
+        in: body
+        name: todo
+        required: true
+        schema:
+          $ref: '#/definitions/model.TodoRequest'
+      responses: {}
+      security:
+      - Authorization: []
+      - User ID: []
+      summary: Create new TODO
+      tags:
+      - TODO
+  /todo/delete/{id}:
+    delete:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - Authorization: []
+      - User ID: []
+      summary: Delete TODO
+      tags:
+      - TODO
+  /todo/get-list/:
+    get:
+      parameters:
+      - description: size per page
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      - description: page number (> 0)
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: sort
+        in: query
+        name: sort
+        type: string
+      responses: {}
+      security:
+      - Authorization: []
+      - User ID: []
+      summary: List TODO
+      tags:
+      - TODO
+  /todo/get-one/{id}:
+    get:
+      parameters:
+      - description: id todo
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - Authorization: []
+      - User ID: []
+      summary: Get TODO
+      tags:
+      - TODO
+  /todo/hard-delete/{id}:
+    delete:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - Authorization: []
+      - User ID: []
+      summary: HardDelete TODO
+      tags:
+      - TODO
+  /todo/update/{id}:
+    put:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update todo
+        in: body
+        name: todo
+        required: true
+        schema:
+          $ref: '#/definitions/model.TodoRequest'
+      responses: {}
+      security:
+      - Authorization: []
+      - User ID: []
+      summary: Update TODO
+      tags:
+      - TODO
+securityDefinitions:
+  Authorization:
+    in: header
+    name: Authorization
+    type: apiKey
+  User ID:
+    in: header
+    name: x-user-id
+    type: apiKey
+swagger: "2.0"
