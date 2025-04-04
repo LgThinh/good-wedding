@@ -1,4 +1,4 @@
-package service
+package router
 
 import (
 	"context"
@@ -7,16 +7,17 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/segmentio/kafka-go"
+	"github.com/sirupsen/logrus"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"good-template-go/conf"
 	ginSwaggerDocs "good-template-go/docs"
+	"good-template-go/pkg/errors"
 	handlers "good-template-go/pkg/handler"
-	kafkaHandlers "good-template-go/pkg/kafka"
 	"good-template-go/pkg/middlewares"
-	"good-template-go/pkg/model"
 	"good-template-go/pkg/repo"
-	"good-template-go/pkg/utils"
+	"good-template-go/pkg/service"
+	"good-template-go/pkg/utils/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
@@ -31,41 +32,38 @@ type kafkaProcessHandler interface {
 	KafkaProcess(ctx context.Context, message kafka.Message) error
 }
 
-func NewService() {
-	router := gin.Default()
-	router.Use(limit.MaxAllowed(200))
-	configCors := cors.DefaultConfig()
-	configCors.AllowOrigins = []string{"*"}
-
-	// GetDB
-	db := GetDBPostgres()
-
-	router.Use(cors.New(configCors))
-	ApplicationV1Router(router, db)
-	startServer(router)
-}
-
 func ApplicationV1Router(router *gin.Engine, db *gorm.DB) {
 	// Router
 	routerV1 := router.Group("/api/v1")
 
 	// Init repo
 	todoRepo := repo.NewRepoTodo(db)
+
+	// Init service
+	todoService := service.NewTodoService(todoRepo)
+
 	// Init handler
 	migrateHandler := handlers.NewMigrationHandler(db)
-	todoHandler := handlers.NewTodoHandler(todoRepo)
+	todoHandler := handlers.NewTodoHandler(todoService)
 
 	// APIs
-	// Migrate
-	routerV1.POST("/internal/migrate-public", middlewares.AuthManagerJWTMiddleware(), migrateHandler.MigratePublic)
-	routerV1.POST("/internal/migrate-log", middlewares.AuthManagerJWTMiddleware(), migrateHandler.MigrateLog)
-	// Todo
-	routerV1.POST("todo/create", middlewares.AuthManagerJWTMiddleware(), todoHandler.Create)
-	routerV1.POST("todo/get-one/:id", middlewares.AuthManagerJWTMiddleware(), todoHandler.Get)
-	routerV1.POST("todo/get-list", middlewares.AuthManagerJWTMiddleware(), todoHandler.List)
-	routerV1.POST("todo/update/:id", middlewares.AuthManagerJWTMiddleware(), todoHandler.Update)
-	routerV1.POST("todo/delete/:id", middlewares.AuthManagerJWTMiddleware(), todoHandler.Delete)
-	routerV1.POST("todo/hard-delete/:id", middlewares.AuthManagerJWTMiddleware(), todoHandler.HardDelete)
+
+	// Internal apis
+	internalRoutes := routerV1.Group("/internal", middlewares.AuthAdminJWTMiddleware())
+	{
+		internalRoutes.POST("/migrate-public", migrateHandler.MigratePublic)
+		internalRoutes.POST("/migrate-log", migrateHandler.MigrateLog)
+	}
+
+	// Todo apis
+	todoRoutes := routerV1.Group("/todo", middlewares.AuthManagerJWTMiddleware())
+	{
+		todoRoutes.POST("/create", middlewares.AuthManagerJWTMiddleware(), todoHandler.Create)
+		todoRoutes.POST("/get-one/:id", middlewares.AuthManagerJWTMiddleware(), todoHandler.Get)
+		todoRoutes.POST("/get-list", middlewares.AuthManagerJWTMiddleware(), todoHandler.List)
+		todoRoutes.POST("/update/:id", middlewares.AuthManagerJWTMiddleware(), todoHandler.Update)
+		todoRoutes.POST("/delete/:id", middlewares.AuthManagerJWTMiddleware(), todoHandler.Delete)
+	}
 
 	// Swagger
 	ginSwaggerDocs.SwaggerInfo.Host = conf.GetConfig().SwaggerHost
@@ -80,11 +78,11 @@ func ApplicationV1Router(router *gin.Engine, db *gorm.DB) {
 	))
 
 	// Kafka Handler
-	kafkaHandlersTodo := kafkaHandlers.NewTodoKafkaHandlers(todoRepo)
-
-	_ = map[string]kafkaProcessHandler{
-		utils.TodoTopicPrefix + model.Todo{}.TableName(): kafkaHandlersTodo,
-	}
+	//kafkaHandlersTodo := kafkaHandlers.NewTodoKafkaHandlers(todoRepo)
+	//
+	//_ = map[string]kafkaProcessHandler{
+	//	utils.TodoTopicPrefix + model.Todo{}.TableName(): kafkaHandlersTodo,
+	//}
 
 	//if len(kafkaTopic) > 0 {
 	//	// call migrate
@@ -100,6 +98,33 @@ func ApplicationV1Router(router *gin.Engine, db *gorm.DB) {
 	//}
 }
 
+func NewRoute() {
+	// Log
+	logger.Init(conf.GetConfig().AppName)
+	logger.DefaultLogger.SetFormatter(&logrus.TextFormatter{
+		ForceColors:      true,
+		FullTimestamp:    true,
+		PadLevelText:     true,
+		ForceQuote:       true,
+		QuoteEmptyFields: true,
+	})
+
+	// GetDB
+	db := GetDBPostgres()
+
+	// Cors
+	router := gin.Default()
+	router.Use(limit.MaxAllowed(200))
+	configCors := cors.DefaultConfig()
+	configCors.AllowOrigins = []string{"*"}
+	router.Use(cors.New(configCors))
+
+	//
+	router.Use(errors.ErrorHandlerMiddleware)
+	ApplicationV1Router(router, db)
+	startServer(router)
+}
+
 func startServer(router http.Handler) {
 	s := &http.Server{
 		Addr:           ":" + conf.GetConfig().Port,
@@ -108,7 +133,7 @@ func startServer(router http.Handler) {
 		WriteTimeout:   18000 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
-	fmt.Println("Server running on:", conf.GetConfig().Host+":"+conf.GetConfig().Port)
+	log.Println("Server running on:", conf.GetConfig().Host+":"+conf.GetConfig().Port)
 	if err := s.ListenAndServe(); err != nil {
 		_ = fmt.Errorf("fatal error description: %s", strings.ToLower(err.Error()))
 		panic(err)
@@ -145,6 +170,7 @@ func GetDBPostgres() *gorm.DB {
 	if err = conn.PingContext(ctx); err != nil {
 		log.Fatalf("error opening connection to database: %v", err)
 	}
+	log.Println("Postgres connected!")
 
 	return db
 }
