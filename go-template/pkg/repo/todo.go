@@ -2,173 +2,168 @@ package repo
 
 import (
 	"context"
-	"fmt"
 	"github.com/google/uuid"
+	"good-template-go/pkg/errors"
 	"good-template-go/pkg/model"
 	"good-template-go/pkg/utils"
+	"good-template-go/pkg/utils/logger"
 	"gorm.io/gorm"
-	"log"
 )
 
-// Repo is a struct that contains the database implementation for truck entity
-type Repo struct {
+// TodoRepo is a struct that contains the database implementation for truck entity
+type TodoRepo struct {
 	DB *gorm.DB
 }
 
-func (r *Repo) DBWithTimeout(ctx context.Context) (*gorm.DB, context.CancelFunc) {
+func (r *TodoRepo) DBWithTimeout(ctx context.Context) (*gorm.DB, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(ctx, generalQueryTimeout)
 	return r.DB.WithContext(ctx), cancel
 }
 
-func NewRepoTodo(repoTodo *gorm.DB) RepoTodoInterface {
-	return &Repo{
-		DB: repoTodo,
+func NewRepoTodo(todoRepo *gorm.DB) TodoRepoInterface {
+	return &TodoRepo{
+		DB: todoRepo,
 	}
 }
 
-type RepoTodoInterface interface {
-	Create(param interface{}, ob *model.Todo) error
-	Get(param interface{}, id uuid.UUID) (*model.Todo, error)
-	Filter(param interface{}, f *model.TodoFilter) (*model.TodoFilterResult, error)
-	Update(param interface{}, id uuid.UUID, ob *model.Todo) error
-	Delete(param interface{}, id uuid.UUID) error
-	GetOneFlexible(param interface{}, field string, value interface{}) (*model.Todo, error)
+type TodoRepoInterface interface {
+	DBWithTimeout(ctx context.Context) (*gorm.DB, context.CancelFunc)
+	Create(tx *gorm.DB, ob *model.Todo) (*model.Todo, error)
+	Get(tx *gorm.DB, id uuid.UUID) (*model.Todo, error)
+	Filter(tx *gorm.DB, f *model.TodoFilter) (*model.TodoFilterResult, error)
+	Update(tx *gorm.DB, id, updaterID uuid.UUID, ob *model.TodoUpdateRequest) (*model.Todo, error)
+	Delete(tx *gorm.DB, id, updaterID uuid.UUID) error
+	GetOneFlexible(tx *gorm.DB, field string, value interface{}) (*model.Todo, error)
 }
 
-func (r *Repo) Create(param interface{}, ob *model.Todo) error {
-	var (
-		tx     *gorm.DB
-		cancel context.CancelFunc
-	)
-	switch v := param.(type) {
-	case context.Context:
-		tx, cancel = r.DBWithTimeout(v)
-		defer cancel()
-	case *gorm.DB:
-		tx = v
-	default:
-		return fmt.Errorf("invalid parameter")
+func (r *TodoRepo) Create(tx *gorm.DB, ob *model.Todo) (*model.Todo, error) {
+	log := logger.WithTag("TodoRepo|Create")
+	err := tx.Create(&ob).Error
+	if err != nil {
+		logger.LogError(log, err, "Error when get create")
+		appErr := errors.FeAppError("Không tạo được", errors.UnknownError)
+		return nil, appErr
 	}
 
-	return tx.Create(ob).Error
+	return ob, nil
 }
 
-func (r *Repo) Get(param interface{}, id uuid.UUID) (*model.Todo, error) {
-	var (
-		tx     *gorm.DB
-		cancel context.CancelFunc
-	)
-	switch v := param.(type) {
-	case context.Context:
-		tx, cancel = r.DBWithTimeout(v)
-		defer cancel()
-	case *gorm.DB:
-		tx = v
-	default:
-		return nil, fmt.Errorf("invalid parameter")
+func (r *TodoRepo) Get(tx *gorm.DB, id uuid.UUID) (*model.Todo, error) {
+	log := logger.WithTag("TodoRepo|Get")
+	var todo model.Todo
+	err := tx.Where("id = ?", id).First(&todo).Error
+	if err != nil {
+		logger.LogError(log, err, "Error when get information")
+		appErr := errors.FeAppError("Không tìm thấy thông tin", errors.UnknownError)
+		return nil, appErr
 	}
 
-	o := &model.Todo{}
-
-	err := tx.First(&o, id).Error
-	return o, err
+	return &todo, nil
 }
 
-func (r *Repo) Filter(param interface{}, f *model.TodoFilter) (*model.TodoFilterResult, error) {
-	var (
-		tx     *gorm.DB
-		cancel context.CancelFunc
-	)
-	switch v := param.(type) {
-	case context.Context:
-		tx, cancel = r.DBWithTimeout(v)
-		defer cancel()
-	case *gorm.DB:
-		tx = v
-	default:
-		return nil, fmt.Errorf("invalid parameter")
-	}
+func (r *TodoRepo) Filter(tx *gorm.DB, f *model.TodoFilter) (*model.TodoFilterResult, error) {
+	log := logger.WithTag("TodoRepo|Filter")
 
 	tx = tx.Model(&model.Todo{})
 
-	op := tx.Where
-	tx = utils.FilterIfNotNil(f.CreatedFrom, tx, op, "created_at >= ?")
-	tx = utils.FilterIfNotNil(f.CreatedTo, tx, op, "created_at <= ?")
-	tx = utils.FilterIfNotNil(f.CreatorID, tx, op, "creator_id = ?")
-	tx = utils.FilterIfNotNil(f.Name, tx, op, "name = ?")
-	tx = utils.FilterIfNotNil(f.Key, tx, op, "key = ?")
-	tx = utils.FilterIfNotNil(f.IsActive, tx, op, "is_active = ?")
-	tx = utils.FilterIfNotNil(f.Code, tx, op, "code = ?")
+	if f.FromDate != nil {
+		fromDate := utils.ConvertUnixMilliToTime(*f.FromDate)
+		tx = tx.Where("created_at >= ?", fromDate)
+	}
+
+	if f.ToDate != nil {
+		toDate := utils.ConvertUnixMilliToTime(*f.ToDate)
+		tx = tx.Where("created_at <= ?", toDate)
+	}
+
+	if f.CreatorID != nil {
+		tx = tx.Where("creator_id = ?", *f.CreatorID)
+	}
+
+	if f.Name != nil {
+		tx = tx.Where("name = ?", *f.Name)
+	}
+
+	if f.Key != nil {
+		tx = tx.Where("key = ?", *f.Key)
+	}
+
+	if f.IsActive != nil {
+		tx = tx.Where("is_active = ?", *f.IsActive)
+	}
+
+	if f.Code != nil {
+		tx = tx.Where("code = ?", *f.Code)
+	}
 
 	result := &model.TodoFilterResult{
 		Filter:  f,
 		Records: []*model.Todo{},
 	}
 
-	f.Pager.SortableFields = []string{"id", "created_at", "updated_at"}
-	pager := result.Filter.Pager
+	f.Pager.SortableFields = []string{"id", "created_at", "updated_at", "name"}
+
+	pager := f.Pager
 
 	tx = pager.DoQuery(&result.Records, tx)
 	if tx.Error != nil {
-		log.Printf("error while filter todo")
+		logger.LogError(log, tx.Error, "Error when get list")
+		appErr := errors.FeAppError("Không tìm thấy danh sách", errors.NotFound)
+		return nil, appErr
 	}
 
-	return result, tx.Error
+	if result.Records == nil {
+		result.Records = []*model.Todo{}
+	}
+
+	return result, nil
 }
 
-func (r *Repo) Update(param interface{}, id uuid.UUID, ob *model.Todo) error {
-	var (
-		tx     *gorm.DB
-		cancel context.CancelFunc
-	)
-	switch v := param.(type) {
-	case context.Context:
-		tx, cancel = r.DBWithTimeout(v)
-		defer cancel()
-	case *gorm.DB:
-		tx = v
-	default:
-		return fmt.Errorf("invalid parameter")
+func (r *TodoRepo) Update(tx *gorm.DB, id, updaterID uuid.UUID, ob *model.TodoUpdateRequest) (*model.Todo, error) {
+	log := logger.WithTag("TodoRepo|Update")
+
+	var updatedTodo model.Todo
+
+	if err := tx.Model(&updatedTodo).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"updater_id":  updaterID,
+			"name":        *ob.Name,
+			"key":         *ob.Key,
+			"is_active":   *ob.IsActive,
+			"code":        *ob.Code,
+			"description": *ob.Description,
+		}).
+		First(&updatedTodo, id).Error; err != nil {
+		logger.LogError(log, err, "Error when updating")
+		return nil, errors.FeAppError("Không cập nhập được", errors.UnknownError)
 	}
 
-	return tx.Where("id = ?", id).Updates(&ob).Error
+	return &updatedTodo, nil
 }
 
-func (r *Repo) Delete(param interface{}, id uuid.UUID) error {
-	var (
-		tx     *gorm.DB
-		cancel context.CancelFunc
-	)
-	switch v := param.(type) {
-	case context.Context:
-		tx, cancel = r.DBWithTimeout(v)
-		defer cancel()
-	case *gorm.DB:
-		tx = v
-	default:
-		return fmt.Errorf("invalid parameter")
+func (r *TodoRepo) Delete(tx *gorm.DB, id, updaterID uuid.UUID) error {
+	log := logger.WithTag("TodoRepo|Delete")
+
+	if err := tx.Delete(model.Todo{}, id).Error; err != nil {
+		logger.LogError(log, err, "Error when delete")
+		err = errors.FeAppError("Không xóa được", errors.UnknownError)
+		return err
 	}
 
-	return tx.Delete(&model.Todo{}, id).Error
+	return nil
 }
 
-func (r *Repo) GetOneFlexible(param interface{}, field string, value interface{}) (*model.Todo, error) {
-	var (
-		tx     *gorm.DB
-		cancel context.CancelFunc
-	)
-	switch v := param.(type) {
-	case context.Context:
-		tx, cancel = r.DBWithTimeout(v)
-		defer cancel()
-	case *gorm.DB:
-		tx = v
-	default:
-		return nil, fmt.Errorf("invalid parameter")
+func (r *TodoRepo) GetOneFlexible(tx *gorm.DB, field string, value interface{}) (*model.Todo, error) {
+	log := logger.WithTag("TodoRepo|GetOneFlexible")
+
+	ob := &model.Todo{}
+
+	if err := tx.Where(field+" = ? ", value).First(&ob).Error; err != nil {
+		logger.LogError(log, err, "Error when get")
+		err = errors.FeAppError("Không tìm thấy", errors.UnknownError)
+		return nil, err
 	}
 
-	o := &model.Todo{}
-
-	err := tx.Where(field+" = ? ", value).First(&o).Error
-	return o, err
+	return ob, nil
 }

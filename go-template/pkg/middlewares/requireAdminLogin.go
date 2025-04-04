@@ -10,9 +10,9 @@ import (
 	"strings"
 )
 
-// AuthJWTMiddleware is a function that validates the jwt owner token
-func AuthManagerJWTMiddleware() gin.HandlerFunc {
-	log := logger.Tag("AuthManagerJWTMiddleware")
+// AuthAdminJWTMiddleware is a function that validates the jwt token
+func AuthAdminJWTMiddleware() gin.HandlerFunc {
+	log := logger.Tag("AuthAdminJWTMiddleware")
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -33,7 +33,7 @@ func AuthManagerJWTMiddleware() gin.HandlerFunc {
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		// Parse token
-		claims, err := security.ParseManagerJWT(tokenString)
+		claims, err := security.ParseAdminJWT(tokenString)
 		if err != nil {
 			logger.LogError(log, err, "error parsing token")
 			appErr := errors.FeAppError(errors.VnTokenInvalid, errors.TokenInvalid)
@@ -42,7 +42,7 @@ func AuthManagerJWTMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if claims.Role != utils.Manager {
+		if claims.Role != utils.Admin {
 			appErr := errors.FeAppError(errors.VnPermissionDenied, errors.PermissionDenied)
 			_ = c.Error(appErr)
 			c.Abort()

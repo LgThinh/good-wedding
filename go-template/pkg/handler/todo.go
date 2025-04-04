@@ -3,20 +3,20 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/praslar/lib/common"
+	"good-template-go/pkg/errors"
 	"good-template-go/pkg/model"
 	"good-template-go/pkg/model/paging"
-	"good-template-go/pkg/repo"
+	"good-template-go/pkg/service"
 	"net/http"
 )
 
-// TodoHandler is a struct that contains the Todo service
+// TodoHandler is a struct that contains the Todo router
 type TodoHandler struct {
-	obRepo repo.RepoTodoInterface
+	todoService service.TodoServiceInterface
 }
 
-func NewTodoHandler(obRepo repo.RepoTodoInterface) *TodoHandler {
-	return &TodoHandler{obRepo: obRepo}
+func NewTodoHandler(todoService service.TodoServiceInterface) *TodoHandler {
+	return &TodoHandler{todoService: todoService}
 }
 
 // Create godoc
@@ -24,36 +24,40 @@ func NewTodoHandler(obRepo repo.RepoTodoInterface) *TodoHandler {
 // @Tags		TODO
 // @Security   Authorization
 // @Security   User ID
-// @Param	todo	body	model.TodoRequest	true	"New TODO"
+// @Param	todo	body	model.CreateTodoRequest	true	"New TODO"
 // @Router		/todo/create [post]
 func (h *TodoHandler) Create(ctx *gin.Context) {
 	var (
-		request model.TodoRequest
+		request model.CreateTodoRequest
 	)
-	userId := ctx.GetHeader("x-user-id")
-	creatorId, err := uuid.Parse(userId)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, "error-parse-userid")
-		return
-	}
-	if err = ctx.ShouldBind(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, "error-parse-request")
-		return
-	}
-	ob := &model.Todo{
-		BaseModel: model.BaseModel{
-			CreatorID: &creatorId,
-		},
-	}
-	common.Sync(request, ob)
 
-	// Create
-	err = h.obRepo.Create(ctx, ob)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, "Create Failure")
+	adminID, exists := ctx.Get("id")
+	if !exists {
+		appErr := errors.FeAppError("Không tìm thấy ID trong token", errors.ValidationError)
+		_ = ctx.Error(appErr)
 		return
 	}
-	ctx.JSON(http.StatusOK, "Create Success")
+
+	adminUUID, ok := adminID.(uuid.UUID)
+	if !ok {
+		appErr := errors.FeAppError("ID không đúng định dạng UUID", errors.ValidationError)
+		_ = ctx.Error(appErr)
+		return
+	}
+
+	if err := ctx.ShouldBind(&request); err != nil {
+		appErr := errors.FeAppError(errors.VnValidationErrorMessage, errors.ValidationError)
+		_ = ctx.Error(appErr)
+		return
+	}
+
+	rs, err := h.todoService.Create(ctx, request, adminUUID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, rs)
 }
 
 // Get godoc
@@ -67,15 +71,17 @@ func (h *TodoHandler) Get(ctx *gin.Context) {
 	IdString := ctx.Param("id")
 	id, err := uuid.Parse(IdString)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, "error-parse-id")
+		appErr := errors.FeAppError("ID không hợp lệ", errors.BadRequest)
+		_ = ctx.Error(appErr)
 		return
 	}
-	// Get
-	rs, err := h.obRepo.Get(ctx, id)
+
+	rs, err := h.todoService.Get(ctx, id)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, "Fail to get data")
+		_ = ctx.Error(err)
 		return
 	}
+
 	ctx.JSON(http.StatusOK, rs)
 }
 
@@ -89,25 +95,28 @@ func (h *TodoHandler) Get(ctx *gin.Context) {
 // @Param		sort		query		string	false	"sort"
 // @Router		/todo/get-list/ [get]
 func (h *TodoHandler) List(ctx *gin.Context) {
-	var req model.TodoListRequest
-
-	err := ctx.BindQuery(&req)
+	var (
+		request model.TodoFilterRequest
+	)
+	err := ctx.ShouldBindQuery(&request)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "fail to get pagination"})
+		err = errors.FeAppError(errors.VnValidationErrorMessage, errors.BadRequest)
+		_ = ctx.Error(err)
 		return
 	}
 
 	filter := &model.TodoFilter{
-		TodoListRequest: req,
-		Pager:           paging.NewPagerWithGinCtx(ctx),
+		TodoFilterRequest: request,
+		Pager:             paging.NewPagerWithGinCtx(ctx),
 	}
-	// List
-	rs, err := h.obRepo.Filter(ctx, filter)
+
+	rs, err := h.todoService.Filter(ctx, filter)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, "Create Failure")
+		_ = ctx.Error(err)
 		return
 	}
-	ctx.JSON(http.StatusOK, rs)
+
+	ctx.JSON(http.StatusOK, paging.NewBodyPaginated(rs.Records, rs.Filter.Pager))
 }
 
 // Update godoc
@@ -120,41 +129,44 @@ func (h *TodoHandler) List(ctx *gin.Context) {
 // @Router		/todo/update/{id} [put]
 func (h *TodoHandler) Update(ctx *gin.Context) {
 	var (
-		request model.TodoRequest
+		request model.TodoUpdateRequest
 	)
-	userId := ctx.GetHeader("x-user-id")
-	updaterId, err := uuid.Parse(userId)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, "error-parse-user-id")
+	if err := ctx.ShouldBind(&request); err != nil {
+		err = errors.FeAppError(errors.VnValidationErrorMessage, errors.BadRequest)
+		_ = ctx.Error(err)
 		return
 	}
+
+	updaterID, exists := ctx.Get("id")
+	if !exists {
+		appErr := errors.FeAppError("Không tìm thấy ID trong token", errors.ValidationError)
+		_ = ctx.Error(appErr)
+		return
+	}
+
+	updaterUUID, ok := updaterID.(uuid.UUID)
+	if !ok {
+		appErr := errors.FeAppError("ID không đúng định dạng UUID", errors.ValidationError)
+		_ = ctx.Error(appErr)
+		return
+	}
+
 	IdString := ctx.Param("id")
 	id, err := uuid.Parse(IdString)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, "error-parse-id")
+		appErr := errors.FeAppError("ID không hợp lệ", errors.BadRequest)
+		_ = ctx.Error(appErr)
 		return
 	}
-
-	if err = ctx.ShouldBind(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, "error-parse-request")
-		return
-	}
-	ob := &model.Todo{
-		BaseModel: model.BaseModel{
-			UpdaterID: &updaterId,
-		},
-	}
-	common.Sync(request, ob)
 
 	// Update
-	err = h.obRepo.Update(ctx, id, ob)
+	rs, err := h.todoService.Update(ctx, id, updaterUUID, request)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, "Create Failure")
+		_ = ctx.Error(err)
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{
-		"Updated": request,
-	})
+
+	ctx.JSON(http.StatusOK, rs)
 }
 
 // Delete godoc
@@ -165,40 +177,33 @@ func (h *TodoHandler) Update(ctx *gin.Context) {
 // @Param		id	path		string				true	"id"
 // @Router		/todo/delete/{id} [delete]
 func (h *TodoHandler) Delete(ctx *gin.Context) {
-	var (
-		ob *model.Todo
-	)
-	userId := ctx.GetHeader("x-user-id")
-	updaterId, err := uuid.Parse(userId)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, "error-parse-user-id")
+	updaterID, exists := ctx.Get("id")
+	if !exists {
+		appErr := errors.FeAppError("Không tìm thấy ID trong token", errors.ValidationError)
+		_ = ctx.Error(appErr)
 		return
 	}
+
+	updaterUUID, ok := updaterID.(uuid.UUID)
+	if !ok {
+		appErr := errors.FeAppError("ID không đúng định dạng UUID", errors.ValidationError)
+		_ = ctx.Error(appErr)
+		return
+	}
+
 	IdString := ctx.Param("id")
 	id, err := uuid.Parse(IdString)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, "error-parse-id")
+		appErr := errors.FeAppError("ID không hợp lệ", errors.BadRequest)
+		_ = ctx.Error(appErr)
 		return
 	}
-	ob.UpdaterID = &updaterId
 
 	// Delete
-	err = h.obRepo.Delete(ctx, id)
+	err = h.todoService.Delete(ctx, id, updaterUUID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, "Create Failure")
+		_ = ctx.Error(err)
 		return
 	}
 	ctx.JSON(http.StatusOK, "Delete Success")
-}
-
-// HardDelete godoc
-// @Summary	HardDelete TODO
-// @Tags		TODO
-// @Security   Authorization
-// @Security   User ID
-// @Param		id	path		string				true	"id"
-// @Router		/todo/hard-delete/{id} [delete]
-func (h *TodoHandler) HardDelete(ctx *gin.Context) {
-	// not implement
-	ctx.JSON(http.StatusOK, "Hard Delete Success")
 }

@@ -2,7 +2,7 @@ package main
 
 import (
 	"good-template-go/conf"
-	"good-template-go/pkg/service"
+	"good-template-go/pkg/router"
 )
 
 // @securityDefinitions.apikey Authorization
@@ -14,5 +14,5 @@ import (
 // @name                       x-user-id
 func main() {
 	conf.LoadConfig()
-	service.NewService()
+	router.NewRoute()
 }

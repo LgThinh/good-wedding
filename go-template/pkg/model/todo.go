@@ -14,11 +14,11 @@ type Todo struct {
 	Description string `json:"description" gorm:"column:description;type:text;default:null"`
 }
 
-func (Todo) TableName() string {
+func (m *Todo) TableName() string {
 	return "todo"
 }
 
-type TodoRequest struct {
+type CreateTodoRequest struct {
 	ID          *uuid.UUID `json:"id,omitempty"`
 	Name        *string    `json:"name" valid:"Required"`
 	Key         *string    `json:"key" valid:"Required"`
@@ -27,8 +27,22 @@ type TodoRequest struct {
 	Description *string    `json:"description"`
 }
 
-type TodoListRequest struct {
-	paging.Param
+type CreateTodoResponse struct {
+	Meta *MetaData              `json:"meta"`
+	Data CreateTodoDataResponse `json:"data"`
+}
+
+type CreateTodoDataResponse struct {
+	CreatorID uuid.UUID `json:"creator_id"`
+	Name      string    `json:"name"`
+	Key       string    `json:"key"`
+	IsActive  bool      `json:"is_active"`
+	Code      string    `json:"code"`
+}
+
+type TodoFilterRequest struct {
+	FromDate  *int64  `json:"from_date" form:"from_date"`
+	ToDate    *int64  `json:"to_date" form:"to_date"`
 	CreatorID *string `json:"creator_id" form:"creator_id"`
 	Name      *string `json:"name" form:"name"`
 	Key       *string `json:"key" form:"key"`
@@ -37,13 +51,34 @@ type TodoListRequest struct {
 }
 
 type TodoFilter struct {
-	TodoListRequest
+	TodoFilterRequest
 	Pager *paging.Pager
 }
 
 type TodoFilterResult struct {
-	Filter  *TodoFilter
-	Records []*Todo
+	Filter  *TodoFilter `json:"filter"`
+	Records []*Todo     `json:"data"`
+}
+
+type TodoUpdateRequest struct {
+	Name        *string `json:"name"`
+	Key         *string `json:"key"`
+	IsActive    *bool   `json:"is_active"`
+	Code        *string `json:"code"`
+	Description *string `json:"description"`
+}
+
+type TodoUpdateResponse struct {
+	Meta *MetaData              `json:"meta"`
+	Data TodoUpdateDataResponse `json:"data"`
+}
+
+type TodoUpdateDataResponse struct {
+	Name        *string `json:"name"`
+	Key         *string `json:"key"`
+	IsActive    *bool   `json:"is_active"`
+	Code        *string `json:"code"`
+	Description *string `json:"description"`
 }
 
 type TodoKafkaMessage struct {

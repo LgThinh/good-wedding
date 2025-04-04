@@ -12,6 +12,7 @@ type AppConfig struct {
 	AppName string `env:"APP_NAME" envDefault:"Go-BaseTemplate"`
 	Host    string `env:"HOST"  envDefault:"localhost"`
 	Port    string `env:"PORT" envDefault:"8001"`
+
 	//DB CONFIG
 	LogFormat       string `env:"LOG_FORMAT" envDefault:"127.0.0.1"`
 	DBHost          string `env:"DB_HOST" envDefault:"localhost"`
@@ -34,8 +35,27 @@ type AppConfig struct {
 
 	// ENV
 	EnvName string `env:"ENV_NAME" envDefault:"dev"`
+
+	// AWS
+	AWSBucketName string `env:"AWS_BUCKET_NAME" envDefault:"your-s3-bucket-name"`
+	AWSRegion     string `env:"AWS_REGION" envDefault:"your-region"`
+	AWSAccessKey  string `env:"AWS_ACCESS_KEY" envDefault:"your-access-key"`
+	AWSSecretKey  string `env:"AWS_SECRET_KEY" envDefault:"your-secret-key"`
+
 	// JWT Token
-	JWTAccessSecure string `env:"JWT_ACCESS_SECURE" envDefault:"private"`
+	JWTAccessSecure  string `env:"JWT_ACCESS_SECURE" envDefault:"private"`
+	JWTRefreshSecure string `env:"JWT_REFRESH_SECURE" envDefault:"private"`
+
+	JWTAdminAccessToken  string `env:"JWT_ADMIN_ACCESS_TOKEN" envDefault:"admin"`
+	JWTAdminRefreshToken string `env:"JWT_ADMIN_REFRESH_TOKEN" envDefault:"admin"`
+
+	JWTManagerAccessToken  string `env:"JWT_MANAGER_ACCESS_TOKEN" envDefault:"manager"`
+	JWTManagerRefreshToken string `env:"JWT_MANAGER_REFRESH_TOKEN" envDefault:"manager"`
+
+	// LOGGER
+	LoggerLevel  string `env:"LOGGER_LEVEL" envDefault:"debug"`
+	LoggerFormat string `env:"LOGGER_FORMAT" envDefault:"json"`
+
 	// SWAGGER
 	SwaggerHost string `env:"SWAGGER_HOST" envDefault:"localhost"`
 }
