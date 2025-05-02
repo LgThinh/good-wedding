@@ -146,24 +146,58 @@ func (r *WeddingRepo) CommentFilter(tx *gorm.DB, f *model.CommentFilter) (*model
 		tx = tx.Where("object_id = ?", *f.ObjectID)
 	}
 
-	result := &model.CommentFilterResult{
-		Filter:  f,
-		Records: []*model.Comment{},
-	}
+	var comments []*model.Comment
 
 	f.Pager.SortableFields = []string{"id", "created_at", "updated_at"}
 
 	pager := f.Pager
 
-	tx = pager.DoQuery(&result.Records, tx)
+	tx = pager.DoQuery(&comments, tx)
 	if tx.Error != nil {
 		logger.LogError(log, tx.Error, "Error when get list")
 		appErr := errors.FeAppError("Không tìm thấy danh sách", errors.NotFound)
 		return nil, appErr
 	}
 
+	var records []*model.CommentDataResponse
+
+	for _, comment := range comments {
+		var (
+			user  model.User
+			media model.ObjectMedia
+		)
+		newTx := tx.Session(&gorm.Session{NewDB: true})
+		ts := newTx.Table("user").Where("id = ?", comment.UserID).First(&user)
+		if ts.Error != nil {
+			logger.LogError(log, ts.Error, "Error when getting user")
+			err := errors.FeAppError(errors.VNNotFound, errors.NotFound)
+			return nil, err
+		}
+
+		ts = newTx.Table("object_media").Where("id = ?", comment.ObjectID).First(&media)
+		if ts.Error != nil {
+			logger.LogError(log, ts.Error, "Error when getting object media")
+			err := errors.FeAppError(errors.VNNotFound, errors.NotFound)
+			return nil, err
+		}
+
+		records = append(records, &model.CommentDataResponse{
+			InitTime:  utils.ConvertTimeToMillisString(&comment.CreatedAt),
+			ObjectID:  &comment.ObjectID,
+			ObjectUrl: media.Url,
+			UserID:    uuid.UUID{},
+			UserName:  user.UserName,
+			Comment:   comment.Comment,
+		})
+	}
+
+	result := &model.CommentFilterResult{
+		Filter:  f,
+		Records: records,
+	}
+
 	if result.Records == nil {
-		result.Records = []*model.Comment{}
+		result.Records = []*model.CommentDataResponse{}
 	}
 
 	return result, nil
@@ -184,24 +218,48 @@ func (r *WeddingRepo) WeddingWishFilter(tx *gorm.DB, f *model.WeddingWishFilter)
 		tx = tx.Where("created_at <= ?", toDate)
 	}
 
-	result := &model.WeddingWishFilterResult{
-		Filter:  f,
-		Records: []*model.WeddingWish{},
-	}
+	var wishes []*model.WeddingWish
 
 	f.Pager.SortableFields = []string{"id", "created_at", "updated_at"}
 
 	pager := f.Pager
 
-	tx = pager.DoQuery(&result.Records, tx)
+	tx = pager.DoQuery(&wishes, tx)
 	if tx.Error != nil {
 		logger.LogError(log, tx.Error, "Error when get list")
 		appErr := errors.FeAppError("Không tìm thấy danh sách", errors.NotFound)
 		return nil, appErr
 	}
 
+	var records []*model.WeddingWishDataResponse
+
+	for _, wish := range wishes {
+		var (
+			user model.User
+		)
+		newTx := tx.Session(&gorm.Session{NewDB: true})
+		ts := newTx.Table("user").Where("id = ?", wish.UserID).First(&user)
+		if ts.Error != nil {
+			logger.LogError(log, ts.Error, "Error when getting user")
+			err := errors.FeAppError(errors.VNNotFound, errors.NotFound)
+			return nil, err
+		}
+
+		records = append(records, &model.WeddingWishDataResponse{
+			InitTime: utils.ConvertTimeToMillisString(&wish.CreatedAt),
+			UserID:   wish.UserID,
+			UserName: user.UserName,
+			Comment:  wish.Comment,
+		})
+	}
+
+	result := &model.WeddingWishFilterResult{
+		Filter:  f,
+		Records: records,
+	}
+
 	if result.Records == nil {
-		result.Records = []*model.WeddingWish{}
+		result.Records = []*model.WeddingWishDataResponse{}
 	}
 
 	return result, nil

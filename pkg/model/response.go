@@ -1,5 +1,7 @@
 package model
 
+import "github.com/google/uuid"
+
 type UploadImageSuccessResponse struct {
 	Meta *MetaData      `json:"meta"`
 	Data UploadImageUrl `json:"data"`
@@ -22,13 +24,28 @@ type StringResponse struct {
 }
 
 type CommentFilterResult struct {
-	Filter  *CommentFilter `json:"filter"`
-	Records []*Comment     `json:"data"`
+	Filter  *CommentFilter         `json:"filter"`
+	Records []*CommentDataResponse `json:"data"`
 }
 
+type CommentDataResponse struct {
+	InitTime  string     `json:"init_time"`
+	ObjectID  *uuid.UUID `json:"object_id"`
+	ObjectUrl string     `json:"object_url"`
+	UserID    uuid.UUID  `json:"user_id"`
+	UserName  string     `json:"user_name"`
+	Comment   string     `json:"comment"`
+}
 type WeddingWishFilterResult struct {
-	Filter  *WeddingWishFilter `json:"filter"`
-	Records []*WeddingWish     `json:"data"`
+	Filter  *WeddingWishFilter         `json:"filter"`
+	Records []*WeddingWishDataResponse `json:"data"`
+}
+
+type WeddingWishDataResponse struct {
+	InitTime string    `json:"init_time"`
+	UserID   uuid.UUID `json:"user_id"`
+	UserName string    `json:"user_name"`
+	Comment  string    `json:"comment"`
 }
 
 type UserFilterResult struct {

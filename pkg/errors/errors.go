@@ -46,6 +46,18 @@ const (
 
 	TokenInvalid   = "TokenInvalid"
 	VnTokenInvalid = "Token hết hạn hoặc không hợp lệ"
+
+	MissingObjectID   = "MissingObjectID"
+	VNMissingObjectID = "Thiếu link ảnh"
+
+	MissingUsername   = "MissingUsername"
+	VNMissingUsername = "Tên không được để trống"
+
+	MissingComment   = "MissingComment"
+	VNMissingComment = "Bình luận không được để trống"
+
+	MissingWish   = "MissingWish"
+	VNMissingWish = "Lời chúc không được để trống"
 )
 
 func FeAppError(err string, errType string) *ResponseError {
@@ -129,6 +141,18 @@ func ErrorHandlerMiddleware(c *gin.Context) {
 				c.JSON(http.StatusBadRequest, resp)
 				return
 			case TokenInvalid:
+				c.JSON(http.StatusBadRequest, resp)
+				return
+			case MissingObjectID:
+				c.JSON(http.StatusBadRequest, resp)
+				return
+			case MissingUsername:
+				c.JSON(http.StatusBadRequest, resp)
+				return
+			case MissingComment:
+				c.JSON(http.StatusBadRequest, resp)
+				return
+			case MissingWish:
 				c.JSON(http.StatusBadRequest, resp)
 				return
 			case InternalServerError:

@@ -2,6 +2,7 @@ package utils
 
 import (
 	gonanoid "github.com/matoous/go-nanoid"
+	"strconv"
 	"time"
 )
 
@@ -49,4 +50,8 @@ func SafeStringPointer(s *string, defaultValue string) *string {
 		return s
 	}
 	return &defaultValue
+}
+
+func ConvertTimeToMillisString(t *time.Time) string {
+	return strconv.FormatInt(t.UnixMilli(), 10)
 }

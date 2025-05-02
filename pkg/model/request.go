@@ -6,14 +6,14 @@ import (
 )
 
 type CommentRequest struct {
-	ObjectID *uuid.UUID `json:"object_id" binding:"required"`
-	UserName *string    `json:"user_name" binding:"required"`
-	Comment  *string    `json:"comment" binding:"required"`
+	ObjectID *uuid.UUID `json:"object_id"`
+	UserName *string    `json:"user_name"`
+	Comment  *string    `json:"comment"`
 }
 
 type WeddingWishRequest struct {
-	UserName *string `json:"user_name" binding:"required"`
-	Comment  *string `json:"comment" binding:"required"`
+	UserName *string `json:"user_name"`
+	Comment  *string `json:"comment"`
 }
 
 type CommentFilterRequest struct {

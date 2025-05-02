@@ -76,6 +76,24 @@ func (h *WeddingHandler) Comment(ctx *gin.Context) {
 		return
 	}
 
+	if request.ObjectID == nil {
+		appErr := errors.FeAppError(errors.VNMissingObjectID, errors.MissingObjectID)
+		_ = ctx.Error(appErr)
+		return
+	}
+
+	if request.UserName == nil {
+		appErr := errors.FeAppError(errors.VNMissingUsername, errors.MissingUsername)
+		_ = ctx.Error(appErr)
+		return
+	}
+
+	if request.Comment == nil {
+		appErr := errors.FeAppError(errors.VNMissingComment, errors.MissingComment)
+		_ = ctx.Error(appErr)
+		return
+	}
+
 	rs, err := h.weddingService.Comment(ctx, request)
 	if err != nil {
 		_ = ctx.Error(err)
@@ -90,6 +108,18 @@ func (h *WeddingHandler) WeddingWish(ctx *gin.Context) {
 	)
 	if err := ctx.ShouldBind(&request); err != nil {
 		appErr := errors.FeAppError(errors.VnValidationErrorMessage, errors.ValidationError)
+		_ = ctx.Error(appErr)
+		return
+	}
+
+	if request.UserName == nil {
+		appErr := errors.FeAppError(errors.VNMissingUsername, errors.MissingUsername)
+		_ = ctx.Error(appErr)
+		return
+	}
+
+	if request.Comment == nil {
+		appErr := errors.FeAppError(errors.VNMissingWish, errors.MissingWish)
 		_ = ctx.Error(appErr)
 		return
 	}
