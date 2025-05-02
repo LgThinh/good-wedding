@@ -47,7 +47,10 @@ func (h *MigrationHandler) MigratePublic(ctx *gin.Context) {
 	}
 
 	models := []interface{}{
-		&model.Object{},
+		&model.ObjectMedia{},
+		&model.User{},
+		&model.Comment{},
+		&model.WeddingWish{},
 	}
 	if err := h.db.AutoMigrate(models...); err != nil {
 		_ = ctx.Error(err)

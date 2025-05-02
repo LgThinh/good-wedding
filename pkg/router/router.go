@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	limit "github.com/aviddiviner/gin-limit"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -27,19 +31,19 @@ import (
 	"time"
 )
 
-func ApplicationV1Router(router *gin.Engine, db *gorm.DB) {
+func ApplicationV1Router(router *gin.Engine, db *gorm.DB, s3Bucket *s3.S3) {
 	// Router
 	routerV1 := router.Group("/api/v1")
 
 	// Init repo
-	todoRepo := repo.NewRepoTodo(db)
+	weddingRepo := repo.NewWeddingRepo(db, s3Bucket)
 
 	// Init service
-	todoService := service.NewTodoService(todoRepo)
+	weddingService := service.NewWeddingService(weddingRepo)
 
 	// Init handler
 	migrateHandler := handlers.NewMigrationHandler(db)
-	todoHandler := handlers.NewTodoHandler(todoService)
+	weddingHandler := handlers.NewWeddingHandler(weddingService)
 
 	// APIs
 
@@ -50,14 +54,11 @@ func ApplicationV1Router(router *gin.Engine, db *gorm.DB) {
 		internalRoutes.POST("/migrate-log", migrateHandler.MigrateLog)
 	}
 
-	// Todo apis
-	todoRoutes := routerV1.Group("/todo", middlewares.AuthManagerJWTMiddleware())
+	// Wedding apis
+	weddingRoutes := routerV1.Group("/wedding")
 	{
-		todoRoutes.POST("/create", middlewares.AuthManagerJWTMiddleware(), todoHandler.Create)
-		todoRoutes.POST("/get-one/:id", middlewares.AuthManagerJWTMiddleware(), todoHandler.Get)
-		todoRoutes.POST("/get-list", middlewares.AuthManagerJWTMiddleware(), todoHandler.List)
-		todoRoutes.POST("/update/:id", middlewares.AuthManagerJWTMiddleware(), todoHandler.Update)
-		todoRoutes.POST("/delete/:id", middlewares.AuthManagerJWTMiddleware(), todoHandler.Delete)
+		weddingRoutes.POST("/upload-image", weddingHandler.UploadImage)
+		weddingRoutes.POST("/upload-video", weddingHandler.UploadVideo)
 	}
 
 	// Swagger
@@ -87,6 +88,9 @@ func NewRoute() {
 	// GetDB
 	db := GetDBPostgres()
 
+	// Get s3
+	s3Bucket := CreateS3Session()
+
 	// Cors
 	router := gin.Default()
 	router.Use(limit.MaxAllowed(200))
@@ -96,7 +100,7 @@ func NewRoute() {
 
 	//
 	router.Use(errors.ErrorHandlerMiddleware)
-	ApplicationV1Router(router, db)
+	ApplicationV1Router(router, db, s3Bucket)
 	startServer(router)
 }
 
@@ -148,4 +152,17 @@ func GetDBPostgres() *gorm.DB {
 	log.Println("Postgres connected!")
 
 	return db
+}
+
+func CreateS3Session() *s3.S3 {
+	sess, err := session.NewSession(&aws.Config{
+		Region:      aws.String(conf.GetConfig().AWSRegion),
+		Credentials: credentials.NewStaticCredentials(conf.GetConfig().AWSAccessKey, conf.GetConfig().AWSSecretKey, ""),
+	})
+	if err != nil {
+		log.Fatal("Unable to create AWS session: ", err)
+	}
+
+	log.Printf("AWS S3 connected!")
+	return s3.New(sess)
 }
