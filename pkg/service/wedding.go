@@ -176,6 +176,7 @@ func (s *WeddingService) Comment(ctx context.Context, req model.CommentRequest) 
 	defer tx.Rollback()
 
 	*req.Comment = utils.SanitizeComment(*req.Comment)
+	*req.UserName = utils.SanitizeComment(*req.UserName)
 
 	_, err := s.weddingRepo.GetObjectMedia(tx, *req.ObjectID)
 	if err != nil {
@@ -211,6 +212,7 @@ func (s *WeddingService) WeddingWish(ctx context.Context, req model.WeddingWishR
 	defer tx.Rollback()
 
 	*req.Comment = utils.SanitizeComment(*req.Comment)
+	*req.UserName = utils.SanitizeComment(*req.UserName)
 
 	user := mapper.MapUser(*req.UserName)
 	newUser, err := s.weddingRepo.CreateUser(tx, user)
