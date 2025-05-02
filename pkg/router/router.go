@@ -59,6 +59,12 @@ func ApplicationV1Router(router *gin.Engine, db *gorm.DB, s3Bucket *s3.S3) {
 	{
 		weddingRoutes.POST("/upload-image", weddingHandler.UploadImage)
 		weddingRoutes.POST("/upload-video", weddingHandler.UploadVideo)
+		weddingRoutes.POST("/comment", weddingHandler.Comment)
+		weddingRoutes.POST("/wish", weddingHandler.WeddingWish)
+		weddingRoutes.GET("/comment/list", weddingHandler.ListComment)
+		weddingRoutes.GET("/wish/list", weddingHandler.ListWeddingWish)
+		weddingRoutes.GET("/user/list", weddingHandler.ListUser)
+		weddingRoutes.GET("/media/list", weddingHandler.ListMedia)
 	}
 
 	// Swagger

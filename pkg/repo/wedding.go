@@ -8,6 +8,7 @@ import (
 	"good-wedding/conf"
 	"good-wedding/pkg/errors"
 	"good-wedding/pkg/model"
+	"good-wedding/pkg/utils"
 	"good-wedding/pkg/utils/logger"
 	"gorm.io/gorm"
 	"mime/multipart"
@@ -34,6 +35,14 @@ type WeddingRepoInterface interface {
 	DBWithTimeout(ctx context.Context) (*gorm.DB, context.CancelFunc)
 	UploadToS3(fileName string, file *s3.PutObjectInput) (*string, error)
 	SaveFileToDB(tx *gorm.DB, creatorID uuid.UUID, file *multipart.FileHeader, url, fileType, objectType string) error
+	CreateUser(tx *gorm.DB, ob *model.User) (*model.User, error)
+	CreateComment(tx *gorm.DB, ob *model.Comment) (*model.Comment, error)
+	CreateWish(tx *gorm.DB, ob *model.WeddingWish) (*model.WeddingWish, error)
+	CommentFilter(tx *gorm.DB, f *model.CommentFilter) (*model.CommentFilterResult, error)
+	WeddingWishFilter(tx *gorm.DB, f *model.WeddingWishFilter) (*model.WeddingWishFilterResult, error)
+	GetObjectMedia(tx *gorm.DB, id uuid.UUID) (*model.ObjectMedia, error)
+	UserFilter(tx *gorm.DB, f *model.UserFilter) (*model.UserFilterResult, error)
+	ObjectMediaFilter(tx *gorm.DB, f *model.ObjectMediaFilter) (*model.ObjectMediaFilterResult, error)
 }
 
 func (r *WeddingRepo) UploadToS3(fileName string, file *s3.PutObjectInput) (*string, error) {
@@ -80,4 +89,229 @@ func (r *WeddingRepo) SaveFileToDB(tx *gorm.DB, creatorID uuid.UUID, file *multi
 	}
 
 	return nil
+}
+
+func (r *WeddingRepo) CreateUser(tx *gorm.DB, ob *model.User) (*model.User, error) {
+	log := logger.WithTag("WeddingRepo|CreateUser")
+	err := tx.Create(&ob).Error
+	if err != nil {
+		logger.LogError(log, err, "Error when get create")
+		appErr := errors.FeAppError("Không tạo được", errors.UnknownError)
+		return nil, appErr
+	}
+
+	return ob, nil
+}
+
+func (r *WeddingRepo) CreateComment(tx *gorm.DB, ob *model.Comment) (*model.Comment, error) {
+	log := logger.WithTag("WeddingRepo|CreateComment")
+	err := tx.Create(&ob).Error
+	if err != nil {
+		logger.LogError(log, err, "Error when get create")
+		appErr := errors.FeAppError("Không tạo được", errors.UnknownError)
+		return nil, appErr
+	}
+
+	return ob, nil
+}
+
+func (r *WeddingRepo) CreateWish(tx *gorm.DB, ob *model.WeddingWish) (*model.WeddingWish, error) {
+	log := logger.WithTag("WeddingRepo|CreateWish")
+	err := tx.Create(&ob).Error
+	if err != nil {
+		logger.LogError(log, err, "Error when get create")
+		appErr := errors.FeAppError("Không tạo được", errors.UnknownError)
+		return nil, appErr
+	}
+
+	return ob, nil
+}
+
+func (r *WeddingRepo) CommentFilter(tx *gorm.DB, f *model.CommentFilter) (*model.CommentFilterResult, error) {
+	log := logger.WithTag("WeddingRepo|CommentFilter")
+
+	tx = tx.Model(&model.Comment{})
+
+	if f.FromDate != nil {
+		fromDate := utils.ConvertUnixMilliToTime(*f.FromDate)
+		tx = tx.Where("created_at >= ?", fromDate)
+	}
+
+	if f.ToDate != nil {
+		toDate := utils.ConvertUnixMilliToTime(*f.ToDate)
+		tx = tx.Where("created_at <= ?", toDate)
+	}
+
+	if f.ObjectID != nil {
+		tx = tx.Where("object_id = ?", *f.ObjectID)
+	}
+
+	result := &model.CommentFilterResult{
+		Filter:  f,
+		Records: []*model.Comment{},
+	}
+
+	f.Pager.SortableFields = []string{"id", "created_at", "updated_at"}
+
+	pager := f.Pager
+
+	tx = pager.DoQuery(&result.Records, tx)
+	if tx.Error != nil {
+		logger.LogError(log, tx.Error, "Error when get list")
+		appErr := errors.FeAppError("Không tìm thấy danh sách", errors.NotFound)
+		return nil, appErr
+	}
+
+	if result.Records == nil {
+		result.Records = []*model.Comment{}
+	}
+
+	return result, nil
+}
+
+func (r *WeddingRepo) WeddingWishFilter(tx *gorm.DB, f *model.WeddingWishFilter) (*model.WeddingWishFilterResult, error) {
+	log := logger.WithTag("WeddingRepo|WeddingWishFilter")
+
+	tx = tx.Model(&model.WeddingWish{})
+
+	if f.FromDate != nil {
+		fromDate := utils.ConvertUnixMilliToTime(*f.FromDate)
+		tx = tx.Where("created_at >= ?", fromDate)
+	}
+
+	if f.ToDate != nil {
+		toDate := utils.ConvertUnixMilliToTime(*f.ToDate)
+		tx = tx.Where("created_at <= ?", toDate)
+	}
+
+	result := &model.WeddingWishFilterResult{
+		Filter:  f,
+		Records: []*model.WeddingWish{},
+	}
+
+	f.Pager.SortableFields = []string{"id", "created_at", "updated_at"}
+
+	pager := f.Pager
+
+	tx = pager.DoQuery(&result.Records, tx)
+	if tx.Error != nil {
+		logger.LogError(log, tx.Error, "Error when get list")
+		appErr := errors.FeAppError("Không tìm thấy danh sách", errors.NotFound)
+		return nil, appErr
+	}
+
+	if result.Records == nil {
+		result.Records = []*model.WeddingWish{}
+	}
+
+	return result, nil
+}
+
+func (r *WeddingRepo) GetObjectMedia(tx *gorm.DB, id uuid.UUID) (*model.ObjectMedia, error) {
+	log := logger.WithTag("WeddingRepo|GetObjectMedia")
+	var todo model.ObjectMedia
+	err := tx.Where("id = ?", id).First(&todo).Error
+	if err != nil {
+		logger.LogError(log, err, "Error when get media")
+		appErr := errors.FeAppError("Không tìm thấy ảnh hay video", errors.UnknownError)
+		return nil, appErr
+	}
+
+	return &todo, nil
+}
+
+func (r *WeddingRepo) UserFilter(tx *gorm.DB, f *model.UserFilter) (*model.UserFilterResult, error) {
+	log := logger.WithTag("WeddingRepo|UserFilter")
+
+	tx = tx.Model(&model.User{})
+
+	if f.FromDate != nil {
+		fromDate := utils.ConvertUnixMilliToTime(*f.FromDate)
+		tx = tx.Where("created_at >= ?", fromDate)
+	}
+
+	if f.ToDate != nil {
+		toDate := utils.ConvertUnixMilliToTime(*f.ToDate)
+		tx = tx.Where("created_at <= ?", toDate)
+	}
+
+	if f.UserName != nil {
+		tx = tx.Where("username = ?", *f.UserName)
+	}
+
+	result := &model.UserFilterResult{
+		Filter:  f,
+		Records: []*model.User{},
+	}
+
+	f.Pager.SortableFields = []string{"id", "created_at", "updated_at"}
+
+	pager := f.Pager
+
+	tx = pager.DoQuery(&result.Records, tx)
+	if tx.Error != nil {
+		logger.LogError(log, tx.Error, "Error when get list")
+		appErr := errors.FeAppError("Không tìm thấy danh sách", errors.NotFound)
+		return nil, appErr
+	}
+
+	if result.Records == nil {
+		result.Records = []*model.User{}
+	}
+
+	return result, nil
+}
+
+func (r *WeddingRepo) ObjectMediaFilter(tx *gorm.DB, f *model.ObjectMediaFilter) (*model.ObjectMediaFilterResult, error) {
+	log := logger.WithTag("WeddingRepo|ObjectMediaFilter")
+
+	tx = tx.Model(&model.ObjectMedia{})
+
+	if f.FromDate != nil {
+		fromDate := utils.ConvertUnixMilliToTime(*f.FromDate)
+		tx = tx.Where("created_at >= ?", fromDate)
+	}
+
+	if f.ToDate != nil {
+		toDate := utils.ConvertUnixMilliToTime(*f.ToDate)
+		tx = tx.Where("created_at <= ?", toDate)
+	}
+
+	if f.Name != nil {
+		tx = tx.Where("name = ?", *f.Name)
+	}
+
+	if f.Url != nil {
+		tx = tx.Where("url = ?", *f.Url)
+	}
+
+	if f.FileType != nil {
+		tx = tx.Where("file_type = ?", *f.FileType)
+	}
+
+	if f.ObjectType != nil {
+		tx = tx.Where("object_type = ?", *f.ObjectType)
+	}
+
+	result := &model.ObjectMediaFilterResult{
+		Filter:  f,
+		Records: []*model.ObjectMedia{},
+	}
+
+	f.Pager.SortableFields = []string{"id", "created_at", "updated_at"}
+
+	pager := f.Pager
+
+	tx = pager.DoQuery(&result.Records, tx)
+	if tx.Error != nil {
+		logger.LogError(log, tx.Error, "Error when get list")
+		appErr := errors.FeAppError("Không tìm thấy danh sách", errors.NotFound)
+		return nil, appErr
+	}
+
+	if result.Records == nil {
+		result.Records = []*model.ObjectMedia{}
+	}
+
+	return result, nil
 }

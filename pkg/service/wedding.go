@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"good-wedding/conf"
 	"good-wedding/pkg/errors"
+	"good-wedding/pkg/mapper"
 	"good-wedding/pkg/model"
 	"good-wedding/pkg/repo"
 	"good-wedding/pkg/utils"
@@ -27,6 +28,12 @@ func NewWeddingService(weddingRepo repo.WeddingRepoInterface) *WeddingService {
 type WeddingServiceInterface interface {
 	UploadImageToS3(ctx context.Context, file *multipart.FileHeader, adminID uuid.UUID) (*model.UploadImageSuccessResponse, error)
 	UploadVideoToS3(ctx context.Context, file *multipart.FileHeader, adminID uuid.UUID) (*model.UploadVideoSuccessResponse, error)
+	Comment(ctx context.Context, req model.CommentRequest) (*model.StringResponse, error)
+	WeddingWish(ctx context.Context, req model.WeddingWishRequest) (*model.StringResponse, error)
+	CommentFilter(ctx context.Context, req *model.CommentFilter) (*model.CommentFilterResult, error)
+	WeddingWishFilter(ctx context.Context, req *model.WeddingWishFilter) (*model.WeddingWishFilterResult, error)
+	UserFilter(ctx context.Context, req *model.UserFilter) (*model.UserFilterResult, error)
+	ObjectMediaFilter(ctx context.Context, req *model.ObjectMediaFilter) (*model.ObjectMediaFilterResult, error)
 }
 
 func (s *WeddingService) UploadImageToS3(ctx context.Context, file *multipart.FileHeader, adminID uuid.UUID) (*model.UploadImageSuccessResponse, error) {
@@ -159,4 +166,93 @@ func (s *WeddingService) UploadVideoToS3(ctx context.Context, file *multipart.Fi
 
 	tx.Commit()
 	return &result, nil
+}
+
+func (s *WeddingService) Comment(ctx context.Context, req model.CommentRequest) (*model.StringResponse, error) {
+	txWithTimeout, cancel := s.weddingRepo.DBWithTimeout(ctx)
+	defer cancel()
+
+	tx := txWithTimeout.Begin()
+	defer tx.Rollback()
+
+	_, err := s.weddingRepo.GetObjectMedia(tx, *req.ObjectID)
+	if err != nil {
+		return nil, err
+	}
+
+	user := mapper.MapUser(*req.UserName)
+	newUser, err := s.weddingRepo.CreateUser(tx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	comment := mapper.MapComment(newUser.ID, &req)
+	_, err = s.weddingRepo.CreateComment(tx, comment)
+	if err != nil {
+		return nil, err
+	}
+
+	result := model.StringResponse{
+		Meta: model.NewMetaData(),
+		Data: "Đã gửi",
+	}
+
+	tx.Commit()
+	return &result, err
+}
+
+func (s *WeddingService) WeddingWish(ctx context.Context, req model.WeddingWishRequest) (*model.StringResponse, error) {
+	txWithTimeout, cancel := s.weddingRepo.DBWithTimeout(ctx)
+	defer cancel()
+
+	tx := txWithTimeout.Begin()
+	defer tx.Rollback()
+
+	user := mapper.MapUser(*req.UserName)
+	newUser, err := s.weddingRepo.CreateUser(tx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	wish := mapper.MapWeddingWish(newUser.ID, &req)
+	_, err = s.weddingRepo.CreateWish(tx, wish)
+	if err != nil {
+		return nil, err
+	}
+
+	result := model.StringResponse{
+		Meta: model.NewMetaData(),
+		Data: "Đã gửi",
+	}
+
+	tx.Commit()
+	return &result, err
+}
+
+func (s *WeddingService) CommentFilter(ctx context.Context, req *model.CommentFilter) (*model.CommentFilterResult, error) {
+	tx, cancel := s.weddingRepo.DBWithTimeout(ctx)
+	defer cancel()
+
+	return s.weddingRepo.CommentFilter(tx, req)
+}
+
+func (s *WeddingService) WeddingWishFilter(ctx context.Context, req *model.WeddingWishFilter) (*model.WeddingWishFilterResult, error) {
+	tx, cancel := s.weddingRepo.DBWithTimeout(ctx)
+	defer cancel()
+
+	return s.weddingRepo.WeddingWishFilter(tx, req)
+}
+
+func (s *WeddingService) UserFilter(ctx context.Context, req *model.UserFilter) (*model.UserFilterResult, error) {
+	tx, cancel := s.weddingRepo.DBWithTimeout(ctx)
+	defer cancel()
+
+	return s.weddingRepo.UserFilter(tx, req)
+}
+
+func (s *WeddingService) ObjectMediaFilter(ctx context.Context, req *model.ObjectMediaFilter) (*model.ObjectMediaFilterResult, error) {
+	tx, cancel := s.weddingRepo.DBWithTimeout(ctx)
+	defer cancel()
+
+	return s.weddingRepo.ObjectMediaFilter(tx, req)
 }
