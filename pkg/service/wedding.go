@@ -175,6 +175,8 @@ func (s *WeddingService) Comment(ctx context.Context, req model.CommentRequest) 
 	tx := txWithTimeout.Begin()
 	defer tx.Rollback()
 
+	*req.Comment = utils.SanitizeComment(*req.Comment)
+
 	_, err := s.weddingRepo.GetObjectMedia(tx, *req.ObjectID)
 	if err != nil {
 		return nil, err
@@ -207,6 +209,8 @@ func (s *WeddingService) WeddingWish(ctx context.Context, req model.WeddingWishR
 
 	tx := txWithTimeout.Begin()
 	defer tx.Rollback()
+
+	*req.Comment = utils.SanitizeComment(*req.Comment)
 
 	user := mapper.MapUser(*req.UserName)
 	newUser, err := s.weddingRepo.CreateUser(tx, user)

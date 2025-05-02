@@ -158,6 +158,9 @@ func ErrorHandlerMiddleware(c *gin.Context) {
 			case InternalServerError:
 				c.JSON(http.StatusInternalServerError, resp)
 				return
+			case UnknownError:
+				c.JSON(http.StatusInternalServerError, resp)
+				return
 			default:
 				c.JSON(http.StatusInternalServerError, resp)
 				return

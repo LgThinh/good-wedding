@@ -3,6 +3,7 @@ package utils
 import (
 	gonanoid "github.com/matoous/go-nanoid"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -54,4 +55,31 @@ func SafeStringPointer(s *string, defaultValue string) *string {
 
 func ConvertTimeToMillisString(t *time.Time) string {
 	return strconv.FormatInt(t.UnixMilli(), 10)
+}
+
+var bannedWords = []string{
+	"cặc",
+	"lồn",
+	"địt",
+	"mẹ mày",
+	"địt mẹ mày",
+	"cac",
+	"lon",
+	"dit",
+	"me may",
+	"dit me may",
+}
+
+func SanitizeComment(input string) string {
+	result := input
+	lowered := strings.ToLower(input)
+
+	for _, banned := range bannedWords {
+		index := strings.Index(lowered, banned)
+		if index != -1 {
+			mask := strings.Repeat("*", len(banned))
+			result = strings.ReplaceAll(result, banned, mask)
+		}
+	}
+	return result
 }
