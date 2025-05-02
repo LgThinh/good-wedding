@@ -2,8 +2,8 @@ package mapper
 
 import (
 	"github.com/google/uuid"
-	"good-template-go/pkg/model"
-	"good-template-go/pkg/utils"
+	"good-wedding/pkg/model"
+	"good-wedding/pkg/utils"
 )
 
 func MapTodo(req model.CreateTodoRequest, adminID uuid.UUID) *model.Todo {

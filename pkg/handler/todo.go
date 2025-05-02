@@ -3,10 +3,10 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"good-template-go/pkg/errors"
-	"good-template-go/pkg/model"
-	"good-template-go/pkg/model/paging"
-	"good-template-go/pkg/service"
+	"good-wedding/pkg/errors"
+	"good-wedding/pkg/model"
+	"good-wedding/pkg/model/paging"
+	"good-wedding/pkg/service"
 	"net/http"
 )
 

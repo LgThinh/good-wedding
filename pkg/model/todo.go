@@ -2,7 +2,7 @@ package model
 
 import (
 	"github.com/google/uuid"
-	"good-template-go/pkg/model/paging"
+	"good-wedding/pkg/model/paging"
 )
 
 type Todo struct {

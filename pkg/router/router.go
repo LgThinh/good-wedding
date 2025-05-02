@@ -6,18 +6,17 @@ import (
 	limit "github.com/aviddiviner/gin-limit"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/segmentio/kafka-go"
 	"github.com/sirupsen/logrus"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"good-template-go/conf"
-	ginSwaggerDocs "good-template-go/docs"
-	"good-template-go/pkg/errors"
-	handlers "good-template-go/pkg/handler"
-	"good-template-go/pkg/middlewares"
-	"good-template-go/pkg/repo"
-	"good-template-go/pkg/service"
-	"good-template-go/pkg/utils/logger"
+	"good-wedding/conf"
+	ginSwaggerDocs "good-wedding/docs"
+	"good-wedding/pkg/errors"
+	handlers "good-wedding/pkg/handler"
+	"good-wedding/pkg/middlewares"
+	"good-wedding/pkg/repo"
+	"good-wedding/pkg/service"
+	"good-wedding/pkg/utils/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
@@ -27,10 +26,6 @@ import (
 	"strings"
 	"time"
 )
-
-type kafkaProcessHandler interface {
-	KafkaProcess(ctx context.Context, message kafka.Message) error
-}
 
 func ApplicationV1Router(router *gin.Engine, db *gorm.DB) {
 	// Router
@@ -76,26 +71,6 @@ func ApplicationV1Router(router *gin.Engine, db *gorm.DB) {
 		swaggerFiles.Handler,
 		ginSwagger.PersistAuthorization(true),
 	))
-
-	// Kafka Handler
-	//kafkaHandlersTodo := kafkaHandlers.NewTodoKafkaHandlers(todoRepo)
-	//
-	//_ = map[string]kafkaProcessHandler{
-	//	utils.TodoTopicPrefix + model.Todo{}.TableName(): kafkaHandlersTodo,
-	//}
-
-	//if len(kafkaTopic) > 0 {
-	//	// call migrate
-	//	err := migrateHandler.MigrateDatabase()
-	//	if err != nil {
-	//		log.Fatalf("error migrating tables: %v", err)
-	//	}
-	//}
-
-	//for topic, handler := range kafkaTopic {
-	//	fmt.Printf("Fetching message for topic: %s \n", topic)
-	//	go KafkaConsumer(topic, handler)
-	//}
 }
 
 func NewRoute() {
@@ -173,72 +148,4 @@ func GetDBPostgres() *gorm.DB {
 	log.Println("Postgres connected!")
 
 	return db
-}
-
-func KafkaConsumer(topic string, handlers kafkaProcessHandler) {
-	brokers := strings.Split(conf.GetConfig().KafkaBrokers, ";")
-	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:   brokers,
-		Topic:     topic,
-		Partition: 0,
-		GroupID:   conf.GetConfig().AppName,
-		GroupBalancers: []kafka.GroupBalancer{
-			kafka.RangeGroupBalancer{},
-			kafka.RoundRobinGroupBalancer{},
-		},
-	})
-
-	var (
-		m   kafka.Message
-		err error
-	)
-
-	for {
-		m, err = r.FetchMessage(context.Background())
-		if err != nil {
-			break
-		}
-
-		// commit empty message
-		ctx := context.Background()
-		if string(m.Value) == "" {
-			err = r.CommitMessages(ctx, m)
-		} else {
-
-			// process kafka message
-			if err = handlers.KafkaProcess(ctx, m); err != nil {
-				message := fmt.Sprintf("error process message at offset %d, topic %s: %v", m.Offset, m.Topic, err)
-				log.Printf(message)
-				go func() {
-					w := kafka.Writer{
-						Addr:                   kafka.TCP(fmt.Sprintf("%s:%s", conf.GetConfig().KafkaHost, conf.GetConfig().KafkaPort)),
-						Topic:                  "error_log",
-						AllowAutoTopicCreation: true,
-					}
-
-					err = w.WriteMessages(context.Background(), kafka.Message{
-						Key:   []byte("error"),
-						Value: []byte(message),
-					})
-					if err != nil {
-						log.Printf("failed to log error at offset %d, topic %s: %v:", m.Offset, m.Topic, err)
-					}
-					if err = w.Close(); err != nil {
-						log.Printf("failed to close writer: %v", err)
-					}
-				}()
-
-				continue
-			} else {
-				err = r.CommitMessages(ctx, m)
-			}
-		}
-		if err != nil {
-			log.Fatalf("failed to commit message at offset %d, topic %s: %v:", m.Offset, m.Topic, err)
-		}
-	}
-
-	if err = r.Close(); err != nil {
-		log.Fatalf("failed to close reader: %v", err)
-	}
 }

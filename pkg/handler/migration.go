@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
+	"good-wedding/pkg/model"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 	"log"
@@ -46,7 +47,7 @@ func (h *MigrationHandler) MigratePublic(ctx *gin.Context) {
 	}
 
 	models := []interface{}{
-		//&model.Todo{},
+		&model.Object{},
 	}
 	if err := h.db.AutoMigrate(models...); err != nil {
 		_ = ctx.Error(err)

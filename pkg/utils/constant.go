@@ -11,3 +11,8 @@ const (
 	Admin   = "admin"
 	Manager = "manager"
 )
+
+const (
+	Image = "image"
+	Video = "video"
+)

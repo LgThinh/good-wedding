@@ -3,7 +3,7 @@ package logger
 import (
 	"context"
 	"github.com/sirupsen/logrus"
-	"good-template-go/conf"
+	"good-wedding/conf"
 	"os"
 	"sync"
 )

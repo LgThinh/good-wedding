@@ -9,7 +9,7 @@ import (
 
 // AppConfig presents app conf
 type AppConfig struct {
-	AppName string `env:"APP_NAME" envDefault:"Go-BaseTemplate"`
+	AppName string `env:"APP_NAME" envDefault:"Go-Wedding"`
 	Host    string `env:"HOST"  envDefault:"localhost"`
 	Port    string `env:"PORT" envDefault:"8001"`
 

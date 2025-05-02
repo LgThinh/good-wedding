@@ -3,10 +3,10 @@ package middlewares
 import (
 	errors2 "errors"
 	"github.com/gin-gonic/gin"
-	"good-template-go/pkg/errors"
-	"good-template-go/pkg/security"
-	"good-template-go/pkg/utils"
-	"good-template-go/pkg/utils/logger"
+	"good-wedding/pkg/errors"
+	"good-wedding/pkg/security"
+	"good-wedding/pkg/utils"
+	"good-wedding/pkg/utils/logger"
 	"strings"
 )
 

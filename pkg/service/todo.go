@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 	"github.com/google/uuid"
-	"good-template-go/pkg/mapper"
-	"good-template-go/pkg/model"
-	"good-template-go/pkg/repo"
+	"good-wedding/pkg/mapper"
+	"good-wedding/pkg/model"
+	"good-wedding/pkg/repo"
 )
 
 type TodoService struct {

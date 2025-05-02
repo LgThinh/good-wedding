@@ -3,10 +3,10 @@ package repo
 import (
 	"context"
 	"github.com/google/uuid"
-	"good-template-go/pkg/errors"
-	"good-template-go/pkg/model"
-	"good-template-go/pkg/utils"
-	"good-template-go/pkg/utils/logger"
+	"good-wedding/pkg/errors"
+	"good-wedding/pkg/model"
+	"good-wedding/pkg/utils"
+	"good-wedding/pkg/utils/logger"
 	"gorm.io/gorm"
 )
 

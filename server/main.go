@@ -1,8 +1,8 @@
 package main
 
 import (
-	"good-template-go/conf"
-	"good-template-go/pkg/router"
+	"good-wedding/conf"
+	"good-wedding/pkg/router"
 )
 
 // @securityDefinitions.apikey Authorization

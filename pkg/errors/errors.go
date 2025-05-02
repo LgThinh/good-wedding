@@ -3,7 +3,7 @@ package errors
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
-	"good-template-go/pkg/model"
+	"good-wedding/pkg/model"
 	"net/http"
 )
 

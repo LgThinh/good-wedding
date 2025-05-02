@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
-	"good-template-go/conf"
-	errors2 "good-template-go/pkg/errors"
-	"good-template-go/pkg/utils"
+	"good-wedding/conf"
+	errors2 "good-wedding/pkg/errors"
+	"good-wedding/pkg/utils"
 	"time"
 )
 
