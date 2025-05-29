@@ -245,3 +245,25 @@ func (h *WeddingHandler) ListMedia(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, paging.NewBodyPaginated(rs.Records, rs.Filter.Pager))
 }
+
+func (h *WeddingHandler) GetOneImage(ctx *gin.Context) {
+	name := ctx.Param("name")
+	rs, err := h.weddingService.GetOneImage(ctx, name)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, rs)
+}
+
+func (h *WeddingHandler) GetOneVideo(ctx *gin.Context) {
+	name := ctx.Param("name")
+	rs, err := h.weddingService.GetOneVideo(ctx, name)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, rs)
+}

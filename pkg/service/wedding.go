@@ -34,6 +34,8 @@ type WeddingServiceInterface interface {
 	WeddingWishFilter(ctx context.Context, req *model.WeddingWishFilter) (*model.WeddingWishFilterResult, error)
 	UserFilter(ctx context.Context, req *model.UserFilter) (*model.UserFilterResult, error)
 	ObjectMediaFilter(ctx context.Context, req *model.ObjectMediaFilter) (*model.ObjectMediaFilterResult, error)
+	GetOneImage(ctx context.Context, customName string) (*model.GetOneImageResult, error)
+	GetOneVideo(ctx context.Context, customName string) (*model.GetOneVideoResult, error)
 }
 
 func (s *WeddingService) UploadImageToS3(ctx context.Context, file *multipart.FileHeader, adminID uuid.UUID, customName string) (*model.UploadImageSuccessResponse, error) {
@@ -261,4 +263,18 @@ func (s *WeddingService) ObjectMediaFilter(ctx context.Context, req *model.Objec
 	defer cancel()
 
 	return s.weddingRepo.ObjectMediaFilter(tx, req)
+}
+
+func (s *WeddingService) GetOneImage(ctx context.Context, customName string) (*model.GetOneImageResult, error) {
+	tx, cancel := s.weddingRepo.DBWithTimeout(ctx)
+	defer cancel()
+
+	return s.weddingRepo.GetOneImage(tx, customName)
+}
+
+func (s *WeddingService) GetOneVideo(ctx context.Context, customName string) (*model.GetOneVideoResult, error) {
+	tx, cancel := s.weddingRepo.DBWithTimeout(ctx)
+	defer cancel()
+
+	return s.weddingRepo.GetOneVideo(tx, customName)
 }

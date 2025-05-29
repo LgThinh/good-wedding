@@ -57,3 +57,13 @@ type ObjectMediaFilterResult struct {
 	Filter  *ObjectMediaFilter `json:"filter"`
 	Records []*ObjectMedia     `json:"data"`
 }
+
+type GetOneImageResult struct {
+	Meta *MetaData   `json:"meta"`
+	Data ObjectMedia `json:"data"`
+}
+
+type GetOneVideoResult struct {
+	Meta *MetaData   `json:"meta"`
+	Data ObjectMedia `json:"data"`
+}

@@ -43,6 +43,8 @@ type WeddingRepoInterface interface {
 	GetObjectMedia(tx *gorm.DB, id uuid.UUID) (*model.ObjectMedia, error)
 	UserFilter(tx *gorm.DB, f *model.UserFilter) (*model.UserFilterResult, error)
 	ObjectMediaFilter(tx *gorm.DB, f *model.ObjectMediaFilter) (*model.ObjectMediaFilterResult, error)
+	GetOneImage(tx *gorm.DB, customName string) (*model.GetOneImageResult, error)
+	GetOneVideo(tx *gorm.DB, customName string) (*model.GetOneVideoResult, error)
 }
 
 func (r *WeddingRepo) UploadToS3(fileName string, file *s3.PutObjectInput) (*string, error) {
@@ -65,8 +67,7 @@ func (r *WeddingRepo) SaveFileToDB(tx *gorm.DB, creatorID uuid.UUID, file *multi
 	fileContent, err := file.Open()
 	if err != nil {
 		logger.LogError(log, err, "unable to open file")
-		appErr := errors.FeAppError("File lỗi", errors.UnknownError)
-		return appErr
+		return errors.FeAppError("File lỗi", errors.UnknownError)
 	}
 	defer fileContent.Close()
 
@@ -82,11 +83,9 @@ func (r *WeddingRepo) SaveFileToDB(tx *gorm.DB, creatorID uuid.UUID, file *multi
 		Size:       file.Size,
 	}
 
-	tx = r.DB.Create(&newFile)
-	if tx.Error != nil {
+	if err := tx.Create(&newFile).Error; err != nil {
 		logger.LogError(log, err, "fail to save file info")
-		appErr := errors.FeAppError("Lỗi khi lưu file", errors.UnknownError)
-		return appErr
+		return errors.FeAppError("Lỗi khi lưu file", errors.UnknownError)
 	}
 
 	return nil
@@ -373,4 +372,38 @@ func (r *WeddingRepo) ObjectMediaFilter(tx *gorm.DB, f *model.ObjectMediaFilter)
 	}
 
 	return result, nil
+}
+
+func (r *WeddingRepo) GetOneImage(tx *gorm.DB, customName string) (*model.GetOneImageResult, error) {
+	log := logger.WithTag("WeddingRepo|GetOneImage")
+
+	var image model.ObjectMedia
+	err := tx.Where("custom_name = ?", customName).First(&image).Error
+	if err != nil {
+		logger.LogError(log, err, "Error when getting image")
+		return nil, errors.FeAppError(errors.VNNotFound, errors.NotFound)
+	}
+
+	result := model.GetOneImageResult{
+		Meta: model.NewMetaData(),
+		Data: image,
+	}
+	return &result, nil
+}
+
+func (r *WeddingRepo) GetOneVideo(tx *gorm.DB, customName string) (*model.GetOneVideoResult, error) {
+	log := logger.WithTag("WeddingRepo|GetOneVideo")
+
+	var image model.ObjectMedia
+	err := tx.Where("custom_name = ?", customName).First(&image).Error
+	if err != nil {
+		logger.LogError(log, err, "Error when getting video")
+		return nil, errors.FeAppError(errors.VNNotFound, errors.NotFound)
+	}
+
+	result := model.GetOneVideoResult{
+		Meta: model.NewMetaData(),
+		Data: image,
+	}
+	return &result, nil
 }
