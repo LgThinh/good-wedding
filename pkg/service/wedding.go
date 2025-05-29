@@ -26,8 +26,8 @@ func NewWeddingService(weddingRepo repo.WeddingRepoInterface) *WeddingService {
 }
 
 type WeddingServiceInterface interface {
-	UploadImageToS3(ctx context.Context, file *multipart.FileHeader, adminID uuid.UUID) (*model.UploadImageSuccessResponse, error)
-	UploadVideoToS3(ctx context.Context, file *multipart.FileHeader, adminID uuid.UUID) (*model.UploadVideoSuccessResponse, error)
+	UploadImageToS3(ctx context.Context, file *multipart.FileHeader, adminID uuid.UUID, customName string) (*model.UploadImageSuccessResponse, error)
+	UploadVideoToS3(ctx context.Context, file *multipart.FileHeader, adminID uuid.UUID, customName string) (*model.UploadVideoSuccessResponse, error)
 	Comment(ctx context.Context, req model.CommentRequest) (*model.StringResponse, error)
 	WeddingWish(ctx context.Context, req model.WeddingWishRequest) (*model.StringResponse, error)
 	CommentFilter(ctx context.Context, req *model.CommentFilter) (*model.CommentFilterResult, error)
@@ -36,7 +36,7 @@ type WeddingServiceInterface interface {
 	ObjectMediaFilter(ctx context.Context, req *model.ObjectMediaFilter) (*model.ObjectMediaFilterResult, error)
 }
 
-func (s *WeddingService) UploadImageToS3(ctx context.Context, file *multipart.FileHeader, adminID uuid.UUID) (*model.UploadImageSuccessResponse, error) {
+func (s *WeddingService) UploadImageToS3(ctx context.Context, file *multipart.FileHeader, adminID uuid.UUID, customName string) (*model.UploadImageSuccessResponse, error) {
 	txWithTimeout, cancel := s.weddingRepo.DBWithTimeout(ctx)
 	defer cancel()
 
@@ -84,7 +84,7 @@ func (s *WeddingService) UploadImageToS3(ctx context.Context, file *multipart.Fi
 	}
 
 	ext := strings.TrimPrefix(fileExt, ".")
-	err = s.weddingRepo.SaveFileToDB(tx, adminID, file, *url, utils.Image, ext)
+	err = s.weddingRepo.SaveFileToDB(tx, adminID, file, *url, utils.Image, ext, customName)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (s *WeddingService) UploadImageToS3(ctx context.Context, file *multipart.Fi
 	return &result, nil
 }
 
-func (s *WeddingService) UploadVideoToS3(ctx context.Context, file *multipart.FileHeader, adminID uuid.UUID) (*model.UploadVideoSuccessResponse, error) {
+func (s *WeddingService) UploadVideoToS3(ctx context.Context, file *multipart.FileHeader, adminID uuid.UUID, customName string) (*model.UploadVideoSuccessResponse, error) {
 	txWithTimeout, cancel := s.weddingRepo.DBWithTimeout(ctx)
 	defer cancel()
 
@@ -152,7 +152,7 @@ func (s *WeddingService) UploadVideoToS3(ctx context.Context, file *multipart.Fi
 	}
 
 	ext := strings.TrimPrefix(fileExt, ".")
-	err = s.weddingRepo.SaveFileToDB(tx, adminID, file, *url, utils.Video, ext)
+	err = s.weddingRepo.SaveFileToDB(tx, adminID, file, *url, utils.Video, ext, customName)
 	if err != nil {
 		return nil, err
 	}

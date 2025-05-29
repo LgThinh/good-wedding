@@ -34,7 +34,7 @@ func NewWeddingRepo(imageRepo *gorm.DB, S3Bucket *s3.S3) WeddingRepoInterface {
 type WeddingRepoInterface interface {
 	DBWithTimeout(ctx context.Context) (*gorm.DB, context.CancelFunc)
 	UploadToS3(fileName string, file *s3.PutObjectInput) (*string, error)
-	SaveFileToDB(tx *gorm.DB, creatorID uuid.UUID, file *multipart.FileHeader, url, fileType, objectType string) error
+	SaveFileToDB(tx *gorm.DB, creatorID uuid.UUID, file *multipart.FileHeader, url, fileType, objectType, customName string) error
 	CreateUser(tx *gorm.DB, ob *model.User) (*model.User, error)
 	CreateComment(tx *gorm.DB, ob *model.Comment) (*model.Comment, error)
 	CreateWish(tx *gorm.DB, ob *model.WeddingWish) (*model.WeddingWish, error)
@@ -59,7 +59,7 @@ func (r *WeddingRepo) UploadToS3(fileName string, file *s3.PutObjectInput) (*str
 	return &fileURL, nil
 }
 
-func (r *WeddingRepo) SaveFileToDB(tx *gorm.DB, creatorID uuid.UUID, file *multipart.FileHeader, url, fileType, objectType string) error {
+func (r *WeddingRepo) SaveFileToDB(tx *gorm.DB, creatorID uuid.UUID, file *multipart.FileHeader, url, fileType, objectType, customName string) error {
 	log := logger.WithTag("WeddingRepo|SaveFileToDB")
 
 	fileContent, err := file.Open()
@@ -74,8 +74,9 @@ func (r *WeddingRepo) SaveFileToDB(tx *gorm.DB, creatorID uuid.UUID, file *multi
 		BaseModel: model.BaseModel{
 			CreatorID: &creatorID,
 		},
-		ObjectType: objectType,
 		Name:       file.Filename,
+		CustomName: customName,
+		ObjectType: objectType,
 		FileType:   fileType,
 		Url:        url,
 		Size:       file.Size,

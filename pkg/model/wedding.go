@@ -5,6 +5,7 @@ import "github.com/google/uuid"
 type ObjectMedia struct {
 	BaseModel
 	Name       string `json:"name" gorm:"column:name;type:text;NOT NULL"`
+	CustomName string `json:"custom_name" gorm:"column:custom_name;type:text;NOT NULL"`
 	ObjectType string `json:"object_type" gorm:"column:object_type;type:text;NOT NULL"`
 	FileType   string `json:"file_type" gorm:"column:file_type;type:text;NOT NULL"`
 	Url        string `json:"url" gorm:"column:url;type:text;NOT NULL"`

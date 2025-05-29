@@ -26,6 +26,13 @@ func (h *WeddingHandler) UploadImage(ctx *gin.Context) {
 		return
 	}
 
+	customName := ctx.GetHeader("image_name")
+	if customName == "" {
+		appErr := errors.FeAppError("Thiếu tên ảnh", errors.ValidationError)
+		_ = ctx.Error(appErr)
+		return
+	}
+
 	adminUUID, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174000")
 	if err != nil {
 		appErr := errors.FeAppError("UUID test không hợp lệ", errors.ValidationError)
@@ -33,7 +40,7 @@ func (h *WeddingHandler) UploadImage(ctx *gin.Context) {
 		return
 	}
 
-	rs, err := h.weddingService.UploadImageToS3(ctx, file, adminUUID)
+	rs, err := h.weddingService.UploadImageToS3(ctx, file, adminUUID, customName)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
@@ -50,6 +57,13 @@ func (h *WeddingHandler) UploadVideo(ctx *gin.Context) {
 		return
 	}
 
+	customName := ctx.GetHeader("image_name")
+	if customName == "" {
+		appErr := errors.FeAppError("Thiếu tên ảnh", errors.ValidationError)
+		_ = ctx.Error(appErr)
+		return
+	}
+
 	adminUUID, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174000")
 	if err != nil {
 		appErr := errors.FeAppError("UUID test không hợp lệ", errors.ValidationError)
@@ -57,7 +71,7 @@ func (h *WeddingHandler) UploadVideo(ctx *gin.Context) {
 		return
 	}
 
-	rs, err := h.weddingService.UploadVideoToS3(ctx, file, adminUUID)
+	rs, err := h.weddingService.UploadVideoToS3(ctx, file, adminUUID, customName)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
