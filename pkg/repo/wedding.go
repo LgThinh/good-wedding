@@ -185,7 +185,7 @@ func (r *WeddingRepo) CommentFilter(tx *gorm.DB, f *model.CommentFilter) (*model
 			InitTime:  utils.ConvertTimeToMillisString(&comment.CreatedAt),
 			ObjectID:  &comment.ObjectID,
 			ObjectUrl: media.Url,
-			UserID:    uuid.UUID{},
+			UserID:    user.ID,
 			UserName:  user.UserName,
 			Comment:   comment.Comment,
 		})
